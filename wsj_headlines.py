@@ -12,9 +12,8 @@ def daterange(start_date, end_date):
 #Scrape wsj archive for headlines
 
 class WSJ(Target):
-    item = namedtuple("wsj_articles",["wsj_id", "newssection", "headline", "tstz"])
-    table = "wsj_headlines"
-
+    Model = namedtuple("wsj_articles",["wsj_id", "newssection", "headline", "tstz"])
+    
     def __init__(self, start_date, end_date):
         super().__init__()
         self.start_date = start_date
@@ -28,8 +27,7 @@ class WSJ(Target):
             yield url
     
     
-    @staticmethod
-    def extract_items(response):
+    def extract_items(self,response):
         parser = lxml.html.HTMLParser()
         doc = lxml.html.fromstring(response.content,parser=parser)
         num_pages = int(re.search("\d+", doc.xpath("//*[@id='main']/div[contains(@class,'secondary')]/div/div/div/span/text()")[0]).group())
@@ -44,14 +42,10 @@ class WSJ(Target):
             section = article.xpath("div[contains(@class,'flashline')]//div//span/text()")[0]
             headline = article.xpath("div[contains(@class,'headline')]//div//*//*//span/text()")[0]
             dt = datetime_parser.parse(" ".join([year, month, day, timestamp])) + timedelta(hours=5)
-            items.append(WSJ.item(wsj_id, section, headline, dt))
+            items.append(self.Model(wsj_id, section, headline, dt))
         if "?page=" not in response.request.url:
             to_scrape = [response.request.url+"?page=%d" % i for i in range(2,num_pages)]
         else: 
             to_scrape=[]
         return items, to_scrape
 
-
-
-wsj = WSJ(date(2011,1,1), date(2012,1,30))
-Scraper(wsj).start()
