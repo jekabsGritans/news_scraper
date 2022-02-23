@@ -1,6 +1,5 @@
 from threading import Lock
 from typing import List
-from time import sleep
 
 class DataStore:
     def __init__(self):
