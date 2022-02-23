@@ -1,6 +1,5 @@
 import psycopg2
 from typing import NamedTuple, List
-from collections import namedtuple
 from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 
@@ -43,7 +42,7 @@ class Table:
 
         self.db.execute(query)
     
-    def insert_many(self, items):
+    def insert_many(self, items: List[NamedTuple]):
         """Inserts multiple items in the database table"""
         assert isinstance(items[0], self.Model)
         query = self.db.cursor.mogrify(
