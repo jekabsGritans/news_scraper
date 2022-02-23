@@ -28,17 +28,16 @@ class DataConsumer(Thread):
 
 class Scraper:
     """Handles threading for web scraping"""
-    def __init__(self, target: Target, user_master: UserMaster):
+    def __init__(self, target: Target, table: Table, user_master: UserMaster = UserMaster()):
         self.target = target
         self.user_master = user_master
         self.data_store = DataStore()
-        self.data_consumer = DataConsumer(self.data_store, self.target.table)
-        self._url_generator = self.target.urls()
+        self.data_consumer = DataConsumer(self.data_store, table)
         self.url_queue = DataStore()
     
     def populate_queue(self):
         """Populates URLs to scrape from the target URL generator"""
-        urls = islice(self._url_generator, 100)#TODO: make N configurable
+        urls = islice(self.target._url_gen, 100)#TODO: make N configurable
         self.url_queue.add_many(urls)
         return bool(urls)
 
@@ -62,7 +61,7 @@ class Scraper:
 
     def start(self):
         self.data_consumer.start()
-        while True and self.:
+        while True:
             if not self.populate_queue():
                 break
             ThreadPoolExecutor(max_workers=CONCURRENT_REQUESTS).map(self.scrape_target, self.url_queue.get_all())
