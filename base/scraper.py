@@ -1,15 +1,14 @@
-from base.db import DataBase
+from .db import Table
 from .target import Target
+from .user import UserMaster
+from .config import CONCURRENT_REQUESTS
+from .datastore import DataStore
+from time import sleep
 from concurrent.futures import ThreadPoolExecutor
-from time import sleep, time
 from threading import Thread
 from itertools import islice
 from requests.exceptions import ProxyError
-from .proxies import Proxy
-from .headers import Headers
-from .user import User
-from .config import CONCURRENT_REQUESTS
-from .datastore import DataStore
+
 
 class DataConsumer(Thread):
     def __init__(self, data_store: DataStore, db_table: Table):
@@ -37,11 +36,11 @@ class Scraper:
     
     def populate_queue(self):
         """Populates URLs to scrape from the target URL generator"""
-        urls = islice(self.target._url_gen, 100)#TODO: make N configurable
+        urls = islice(self.target._url_gen, CONCURRENT_REQUESTS*3)
         self.url_queue.add_many(urls)
         return bool(urls)
 
-    def scrape_target(self, url)
+    def scrape_target(self, url):
      """Scrape a single url"""
         user = self.user_master.designee()
         try:
