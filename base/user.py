@@ -1,6 +1,11 @@
 from .proxies import Proxy
 from .headers import Headers
 
+class UserMaster:
+    """Provides users according to spec if needed."""
+    def designee(self):
+        return User.from_randagent_proxyrotator()            
+
 class User:
     proxy_rotator = Proxy.from_rotator()
     def __init__(self, proxy: Proxy, headers: Headers):
