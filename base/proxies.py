@@ -15,4 +15,3 @@ class Proxy:
     def from_rotator(cls):
         http = PROXY_ROTATOR_ENDPOINT
         return cls(http)
-    

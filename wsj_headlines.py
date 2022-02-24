@@ -4,6 +4,7 @@ from dateutil import parser as datetime_parser
 from datetime import date, timedelta
 from base.target import Target
 from base.scraper import Scraper
+from base.db import Table, default_db
 
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):
@@ -33,15 +34,14 @@ class WSJ(Target):
         num_pages = int(re.search("\d+", doc.xpath("//*[@id='main']/div[contains(@class,'secondary')]/div/div/div/span/text()")[0]).group())
         title = doc.xpath("/html/head/title/text()")[0]
         month, day, year = re.search("Archive for ([A-z]+) (\d+), (\d\d\d\d)", title).groups()
-        print(f'scraping {month} {day} {year}')
         articles = doc.xpath('//article')
         items=[]
         for article in articles:
             wsj_id = article.xpath("@data-id")[0]
-            timestamp = article.xpath("div[contains(@class,'timestamp')]//div//p/text()")[0]
-            section = article.xpath("div[contains(@class,'flashline')]//div//span/text()")[0]
-            headline = article.xpath("div[contains(@class,'headline')]//div//*//*//span/text()")[0]
-            dt = datetime_parser.parse(" ".join([year, month, day, timestamp])) + timedelta(hours=5)
+            timestamp = article.xpath("descendant::div[contains(@class,'timestamp')]//div//p/text()")[0]
+            section = article.xpath("descendant::div[contains(@class,'flashline')]//div//span/text()")[0]
+            headline = article.xpath("descendant::span[contains(@class,'headline')]/text()")[0]
+            dt = datetime_parser.parse(" ".join([year, month, day, timestamp]),ignoretz=True) + timedelta(hours=5)
             items.append(self.Model(wsj_id, section, headline, dt))
         if "?page=" not in response.request.url:
             to_scrape = [response.request.url+"?page=%d" % i for i in range(2,num_pages)]
@@ -49,3 +49,8 @@ class WSJ(Target):
             to_scrape=[]
         return items, to_scrape
 
+
+wsj = WSJ(date(2020,1,1),date(2020,12,31))
+table = Table(default_db, wsj.Model)
+scraper = Scraper(wsj, table)
+scraper.start()

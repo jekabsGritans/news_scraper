@@ -6,7 +6,7 @@ from .datastore import DataStore
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
-from itertools import islice
+import requests
 from requests.exceptions import ProxyError
 
 
@@ -21,9 +21,18 @@ class DataConsumer(Thread):
             if not self.data_store.empty:
                 items = self.data_store.get_all()
                 self.db_table.insert_many(items)
-            print("Batch inserted")
-            sleep(3)
+                print("Batch inserted")
+            sleep(2)
 
+
+def getx(g,n):
+    out=[]
+    for _ in range(n):
+        try:
+            out.append(next(g))
+        except:
+            break
+    return out
 
 class Scraper:
     """Handles threading for web scraping"""
@@ -36,32 +45,36 @@ class Scraper:
     
     def populate_queue(self):
         """Populates URLs to scrape from the target URL generator"""
-        urls = islice(self.target._url_gen, CONCURRENT_REQUESTS*3)
+        #urls = islice(self.target._url_gen, CONCURRENT_REQUESTS*3)
+        urls = getx(self.target._url_gen, 6)
         self.url_queue.add_many(urls)
         return bool(urls)
 
     def scrape_target(self, url):
-     """Scrape a single url"""
+        """Scrape a single url"""
+        print("scraping: ", url)
         user = self.user_master.designee()
         try:
-            r = requests.get(url, proxies=user.proxy.dict(), headers=user.headers.dict())
+            r = user.get(url)
         except requests.exceptions.ProxyError:
             self.url_queue.add(url)
-
+            
         if r.status_code == 200: # OK response
+            print("Successful response")
             items, urls_to_scrape = self.target.extract_items(r)
             self.data_store.add_many(items)
             self.url_queue.add_many(urls_to_scrape)
 
         elif r.status_code == 429: # Bad repsonse, usually proxy detected - myb pause scraping?
-            ...
+            sys.exit(1)
         else:#TODO: if non-fatal status_code, add url back to queue
-            ...
+            print("statuscode: ",r.status_code)
 
     def start(self):
         self.data_consumer.start()
+        pool = ThreadPoolExecutor(max_workers=CONCURRENT_REQUESTS)
         while True:
             if not self.populate_queue():
                 break
-            ThreadPoolExecutor(max_workers=CONCURRENT_REQUESTS).map(self.scrape_target, self.url_queue.get_all())
+            pool.map(self.scrape_target, self.url_queue.get_all())
         print("Finished")
