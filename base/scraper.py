@@ -79,7 +79,7 @@ class Scraper:
         """Start scraping"""
 
 
-class ThreadedScraper:
+class ThreadedScraper(Scraper):
     """Handles threading for web scraping"""
     
     def __init__(self, target: Target, table: Table, user_master: ProxyUserMaster = ProxyUserMaster()):
@@ -100,7 +100,7 @@ class ThreadedScraper:
         print("Finished")
 
 
-class SecretScraper:
+class SecretScraper(Scraper):
     """Handles scraping when secrets are needed"""
     
     def __init__(self, target: Target, table: Table, user: PersistantUser = PersistantUser()):
