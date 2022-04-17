@@ -1,13 +1,28 @@
+from abc import abstractmethod
 from .proxies import Proxy
 from .headers import Headers
 import requests
 
-class UserMaster:
-    """Provides users according to spec if needed."""
-    def designee(self):
-        return User.from_randagent_proxyrotator()            
 
 class User:
+    """User to use for scraping"""
+    @abstractmethod
+    def get(self, url) -> requests.Response:
+        """Get request"""
+
+    @abstractmethod
+    def post(self, url, data):
+        """Post request"""
+
+
+class UserMaster:
+    """Provides users according to spec if needed."""
+    @abstractmethod
+    def designee(self):
+        """Return a user to use for scraping"""
+
+
+class DisposableProxyUser(User):
     proxy_rotator = Proxy.from_rotator()
     def __init__(self, proxy: Proxy, headers: Headers):
         self.proxy = proxy
@@ -19,3 +34,20 @@ class User:
     @classmethod
     def from_randagent_proxyrotator(cls):
         return cls(User.proxy_rotator, Headers.random())
+
+
+class ProxyUserMaster(UserMaster):
+    def designee(self):
+        return DisposableProxyUser.from_randagent_proxyrotator()            
+
+
+class PersistantUser(User):
+    def __init__(self, headers: Headers = Headers.random(), session: requests.Session = requests.Session()):
+        self.headers = headers
+        self.session = session
+    
+    def get(self, url):
+        return self.session.get(url, headers=self.headers)
+    
+    def post(self, url, data):
+        return self.session.post(url, data, headers=self.headers)
