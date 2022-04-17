@@ -3,7 +3,7 @@ import lxml.html, re
 from dateutil import parser as datetime_parser
 from datetime import date, timedelta
 from base.target import Target
-from base.scraper import Scraper
+from base.scraper import ThreadedScraper
 from base.db import Table, default_db
 
 def daterange(start_date, end_date):
@@ -52,5 +52,5 @@ class WSJ(Target):
 
 wsj = WSJ(date(2020,1,1),date(2020,12,31))
 table = Table(default_db, wsj.Model)
-scraper = Scraper(wsj, table)
+scraper = ThreadedScraper(wsj, table)
 scraper.start()
