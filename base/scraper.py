@@ -1,6 +1,6 @@
 from .db import Table
 from .target import Target
-from .user import UserMaster
+from .user import User, ProxyUserMaster, PersistantUser
 from .config import CONCURRENT_REQUESTS
 from .datastore import DataStore
 from time import sleep
@@ -8,7 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
 import requests
 from requests.exceptions import ProxyError
-
+from abc import abstractmethod, abstractproperty
+import sys
 
 class DataConsumer(Thread):
     def __init__(self, data_store: DataStore, db_table: Table):
@@ -34,11 +35,11 @@ def getx(g,n):
             break
     return out
 
+
 class Scraper:
-    """Handles threading for web scraping"""
-    def __init__(self, target: Target, table: Table, user_master: UserMaster = UserMaster()):
+    """Handles web scraping"""
+    def __init__(self, target: Target, table: Table):
         self.target = target
-        self.user_master = user_master
         self.data_store = DataStore()
         self.data_consumer = DataConsumer(self.data_store, table)
         self.url_queue = DataStore()
@@ -53,9 +54,8 @@ class Scraper:
     def scrape_target(self, url):
         """Scrape a single url"""
         print("scraping: ", url)
-        user = self.user_master.designee()
         try:
-            r = user.get(url)
+            r = self.user.get(url)
         except requests.exceptions.ProxyError:
             self.url_queue.add(url)
             
@@ -70,6 +70,26 @@ class Scraper:
         else:#TODO: if non-fatal status_code, add url back to queue
             print("statuscode: ",r.status_code)
 
+    @abstractproperty
+    def user(self) -> User:
+        """User to use for scraping"""
+    
+    @abstractmethod
+    def start(self):
+        """Start scraping"""
+
+
+class ThreadedScraper:
+    """Handles threading for web scraping"""
+    
+    def __init__(self, target: Target, table: Table, user_master: ProxyUserMaster = ProxyUserMaster()):
+        super().__init__(self, target, table)
+        self.user_master = user_master
+
+    @property
+    def user(self):
+        return self.user_master.designee()
+
     def start(self):
         self.data_consumer.start()
         pool = ThreadPoolExecutor(max_workers=CONCURRENT_REQUESTS)
@@ -77,4 +97,25 @@ class Scraper:
             if not self.populate_queue():
                 break
             pool.map(self.scrape_target, self.url_queue.get_all())
+        print("Finished")
+
+
+class SecretScraper:
+    """Handles scraping when secrets are needed"""
+    
+    def __init__(self, target: Target, table: Table, user: PersistantUser = PersistantUser()):
+        super().__init__(self, target, table)
+        self.persistant_user = user
+
+    @property
+    def user(self):
+        return self.persistant_user
+
+    def start(self):
+        self.data_consumer.start()
+        while True:
+            if not self.populate_queue():
+                break
+            for url in self.url_queue.get_all():
+                self.scrape_target(url)
         print("Finished")
