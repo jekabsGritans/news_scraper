@@ -47,7 +47,7 @@ class PersistantUser(User):
         self.session = session
     
     def get(self, url):
-        return self.session.get(url, headers=self.headers)
+        return self.session.get(url, headers=self.headers.dict())
     
     def post(self, url, data):
-        return self.session.post(url, data, headers=self.headers)
+        return self.session.post(url, data, headers=self.headers.dict())
