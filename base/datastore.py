@@ -8,7 +8,7 @@ class DataStore:
         self.empty = True
     
     def add(self, item):
-        with self.locl:
+        with self.lock:
             self.items.append(item)
             self.empty = False
 
